@@ -1,0 +1,47 @@
+#+TITLE: Make
+#+LANGUAGE: sl
+#+LATEX_HEADER: \usepackage[]{babel}
+#+LATEX_HEADER: \usepackage[pdf]{graphviz}
+#+OPTIONS: toc:nil
+#+bibliography: seminar.bib
+#+cite_export: basic numeric
+#+AUTHOR: Nikola Brković
+
+* Uvod
+
+* Različice
+
+Originalno različico programa Make je ustvaril Stuart
+Feldman [cite:@acm-award]. Danes pa poznamo več različic programa Make:
+
+- GNU Make :: Je danes najbolj razširjena različica Make, privzeta
+  tako na Linuxu kot tudi MacOS-u. Predstavlja del operacijskega
+  sistema GNU.
+  
+- BSD Make :: Je privzeta različica v operacijskih sistemih družine
+  BSD (FreeBSD, NetBSD). 
+  
+- NMAKE (Microsoft Program Maintenance Utility) :: Je različica,
+  katero je ustvaril Microsoft in teče na Windowsu. Je podprt v
+  razvojnem okolju Visual Studio.
+  
+- dmake
+
+* Upravljanje odvistnosti
+
+#+BEGIN_SRC dot :file ./dot-example.png  :cmdline -Kdot -Tpng
+  digraph {
+      graph [rankdir=TB];
+      graph [dpi=150 splines=ortho];
+      a -> b
+  }
+#+END_SRC
+
+#+RESULTS:
+[[file:./dot-example.png]]
+
+* Vzporedno izvajanje poslov
+
+* Literatura
+
+#+print_bibliography:

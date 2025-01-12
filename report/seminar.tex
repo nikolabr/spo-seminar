@@ -1,27 +1,68 @@
-\documentclass[notitlepage]{report}
-
-\usepackage{titling}
-\usepackage[pdftex]{graphicx}
-\usepackage[slovene]{babel}
-
-\title{%
-  Make \\
-  \large Poročilo seminarske naloge
-}
+% Created 2025-01-12 Sun 23:40
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage[, slovene]{babel}
+\usepackage[pdf]{graphviz}
 \author{Nikola Brković}
-
+\date{\today}
+\title{Make}
+\hypersetup{
+ pdfauthor={Nikola Brković},
+ pdftitle={Make},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 31.0.50 (Org mode 9.8-pre)},
+ pdflang={Slovene}}
 \begin{document}
+
 \maketitle
+\section{Uvod}
+\label{sec:orgeb92cae}
 
-\begin{abstract}
-Bla bla bla bla
-\end{abstract}
+\section{Različice}
+\label{sec:org9b31356}
 
-\section*{Uvod}
+Originalno različico programa Make je ustvaril Stuart
+Feldman ({Association for Computing Machinery}, 2004). Danes pa poznamo več različic programa Make:
 
+\begin{description}
+\item[{GNU Make}] Je danes najbolj razširjena različica Make, privzeta
+tako na Linuxu kot tudi MacOS-u. Predstavlja del operacijskega
+sistema GNU.
+
+\item[{BSD Make}] Je privzeta različica v operacijskih sistemih družine
+BSD (FreeBSD, NetBSD).
+
+\item[{NMAKE (Microsoft Program Maintenance Utility)}] Je različica,
+katero je ustvaril Microsoft in teče na Windowsu. Je podprt v
+razvojnem okolju Visual Studio.
+
+\item dmake
+\end{description}
+\section{Upravljanje odvistnosti}
+\label{sec:org60e4a87}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./dot-example.png}
+\label{org46323e2}
+\end{center}
+\section{Vzporedno izvajanje poslov}
+\label{sec:org1496189}
+
+\section{Literatura}
+\label{sec:orgde4e9e6}
+
+\noindent
+{[}1] {Association for Computing Machinery}, \emph{ACM HONORS CREATOR OF LANDMARK SOFTWARE TOOL}, 2004.
 \end{document}
-
-%%% Local Variables:
-%%% mode: LaTeX
-%%% TeX-master: t
-%%% End:

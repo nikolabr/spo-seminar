@@ -4,3 +4,4 @@ build/
 report/*
 !report/seminar.tex
 !report/seminar.bib
+!report/seminar.org
