@@ -3,8 +3,16 @@
 \usepackage{titling}
 \usepackage[pdftex]{graphicx}
 \usepackage[slovene]{babel}
+\usepackage{bigfoot}
+\usepackage{hyperref}
+\usepackage[pdf]{graphviz}
+\usepackage{forest}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{pygmentex}
+\usepackage{ditaa}
 
-\bibliographystyle{plain}
+\bibliographystyle{acm}
 
 \title{%
   Make \\
@@ -16,31 +24,358 @@
 \maketitle
 
 \begin{abstract}
+  Make je orodje za avtomatizacijo izgradnje programske opreme. To
+  poročilo ponuja pregled nad osnovnimi funkcionalnostimi in koncepti
+  delovanja, ter podrobnosti različice GNU Make.
 \end{abstract}
 
 \section*{Uvod}
 
+Izgradnja programske opreme je pri velikih projektih lahko zelo
+kompleksen in zamuden postopek. Postopek pretvorbe izvorne kode v neko
+končno obliko (npr. izvršljivo datoteko) najpogosteje poteka v več
+fazah. Z orodjem Make lahko postopek izgradnje opišemo v datoteki, ki
+se imenuje Makefile, kjer opišemo, kako določeno fazo izvesti in
+odvisnosti med posameznimi fazami.
+
 \section*{Različice}
 
-Originalno različico programa Make je ustvaril Stuart Feldman
-\cite{acm-award}. Danes pa poznamo več različic programa Make:
+Originalno različico programa Make je ustvaril Stuart Feldman v 70-ih
+letih \cite{acm-award}, in je takrat delovala na zgodnjih različicah
+operacijskega sistema Unix. Danes pa poznamo več različic programa
+Make:
 
 \begin{description}
 \item[GNU Make] Je danes najbolj razširjena različica Make, privzeta
   tako na Linuxu kot tudi MacOS-u. Predstavlja del operacijskega
-  sistema GNU.
+  sistema GNU. Deluje pa tudi na Windowsu, zlasti se uporablja v
+  unixaških okoljih na Windowsu (Cygwin/MSYS2).
   
 \item[BSD Make] Je privzeta različica v operacijskih sistemih družine
   BSD (FreeBSD, NetBSD).
 
 \item[NMAKE (Microsoft Program Maintenance Utility)] Je različica,
   katero je ustvaril Microsoft in teče na Windowsu. Je podprta v
-  razvojnem okolju Visual Studio.
-\end{description}
+  razvojnem okolju Visual Studio. \cite{ms-nmake}
+
+\item[dmake (Distributed Make)] Je različica, katero razvija Apache Software Foundation,
+  in se uporablja pri projektu OpenOffice \cite{dmake}. Predhodno jo je razvijalo
+  podjetje Sun.
   
-\section*{Upravljanje odvisnosti}
+\end{description}
+
+Ker je to najbolj priljubljena različica, se bom v tem poročilu
+osredotočil na GNUjevsko različico, natančneje na izdajo 4.4.1. Kosi
+izvorne kode in podrobnosti implentacije bodo izvirali iz te
+različice, vendar splošni koncepti velja tudi za druge različice.
+
+\section*{Osnovna sintaksa}
+
+Makefile (poleg drugih zadev, kot so definicije spremenljivk) v osnovi
+sestavljajo definicije ciljev. Definicija enega (ali več enakih
+ciljev) izgleda tako:
+
+\begin{verbatim}
+  cilj [cilj ...]: [predpogoj ...]
+   [prvo pravilo]
+   ...
+   [zadnje pravilo]
+\end{verbatim}
+
+V večini primerov predstavlja ime cilja relativno pot (od Makefilea)
+do datoteke. Ciljem, ki ne predstavljajo datoteke, pa pravimo umetni
+cilji (ang. \textit{phony targets}).
+
+Predpogoji (oziroma odvisnosti) so drugi cilji, od katerih je
+definirani cilj odvisen, kar pomeni, da se morajo uspešno izvesti,
+preden se definirani cilj izvede.
+
+Vsako pravilo predstavlja stavek, ki se lahko izvede v sistemski
+lupini. Ker GNU Make izvira iz unixaškega sveta, je razvit z
+unixaškimi lupini v mislih, ampak podpira tudi neunixaške lupine, kot
+so \verb|cmd.exe| (Windows NT), \verb|command.com| (DOS, Windows 95 in
+98), \verb|4OS2| (OS/2). V stavek lahko vključimo določene izraze,
+katere bo Make izračunal ob izvajanju, ampak je sintaksa samih pravil
+precej odvisna od operacijskega sistema in izbrane sistemske lupine.
+
+\section*{Odvisnosti}
+
+V osnovi predstavlja Makefile tekstovno reprezentacijo acikličnega
+usmerjenega grafa odvisnosti. Vsak cilj predstavlja eno vozlišče v
+grafu, odvisnosti so pa usmerjene povezave.
+
+
+\begin{figure}[H]
+  \center{
+    \digraph{basicdependency}{
+      rankdir=TB;
+      size=2;
+      
+      filec [label = "file.c"]
+      fileo [label = "file.o"]
+      
+      mainc [label = "main.c"]
+      maino [label = "main.o"]
+      
+      filec -> fileo -> all;
+      mainc -> maino -> all;
+
+      clean;
+    }    
+  }
+  \caption{Primer grafa odvistnosti za preprosti Makefile. ``all'' pa
+    ``clean'' sta umetna cilja, ostali so datoteke.}
+
+\end{figure}
+
+Cilj, ki predstavlja datoteko, velja za zastarelega, če je čas zadnje
+spremembe datoteke kasnejši kot zadnji čas spremembe njegovih
+naslednikov. V primeru na nasledniki
+cilja ``main.c'' ``main.o'' in ``all''.
+
+\begin{figure}[H]
+  \center{
+    \digraph{dependencyupdate}{
+      rankdir=TB;
+      size=2;
+      node[style=filled]
+      
+      filec [label="file.c", fillcolor=white]
+      fileo [label="file.o", fillcolor=white]
+      
+      mainc [label="main.c", fillcolor=lightgrey]
+      maino [label="main.o", fillcolor=lightgrey]
+
+      all [fillcolor=lightgrey]
+      clean [fillcolor=white]
+      
+      filec -> fileo -> all;
+      mainc -> maino -> all;
+
+      clean;
+    }    
+  }
+  \caption{Primer, v katerem je datoteka main.c bila posodobljena. Če
+    Make zaženemo s ciljem ``all'', bodo izvedeni cilji, označeni s
+    sivo barvo.}
+\end{figure}
+
+\section*{Posli}
 
 \section*{Vzporedno izvajanje poslov}
+
+Pri izvajanju programa Make, mu lahko podamo dodatno zastavico
+\verb|-j| (npr. \verb|make -j 32|), ki nastavi največje število
+poslov, ki jih Make lahko izvaja. Temu število pravimo tudi število
+poslovnih rež (ang. \textit{job slots}).
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{forest}
+      for tree={
+        draw,
+        anchor=north,
+        align=center,
+      },
+      [{make}, align=center,
+      [{ld}],
+      [{gcc}],
+      [{gcc}],
+      [{gcc}]]
+    \end{forest}
+    \caption{Primer izvajanja Make s štirimi poslovnimi režami}
+  \end{center}
+\end{figure}
+
+Posebne težave pri vzporednem izvajanju poslov predstavlja rekurzivna
+uporaba Make (ang. \textit{recursive make}). Rekurzivna uporaba
+pomeni, da se znotraj nekega pravila v Makefilu ponovno kliče
+Make. Čeprav je takšna uporaba odsvetovana (``Recursive Make
+Considered Harmful'') \cite{Miller2008RecursiveMC}, se še vedno
+uporablja pri večjih projektih, ki so sestavljeni iz več datotek z
+izvorno kodo.
+
+\begin{figure}[H]
+  \begin{center}
+    \begin{forest}
+      for tree={
+        draw,
+        anchor=north,
+        align=center,
+      },
+      [{make}, align=center,
+      [{ld}],
+      [{gcc}],
+      [{make}, [{gcc}], [{gcc}]]]
+    \end{forest}
+    \caption{Primer izvajanja rekurzivnega Make s štirimi poslovnimi režami}
+  \end{center}
+\end{figure}
+
+\begin{figure}[H]
+  \begin{pygmented}[lang=c]
+    subsystem:
+        cd subdir && \$(MAKE)
+  \end{pygmented}
+  \caption{Primer rekurzivnega izvajanja Make}
+\end{figure}
+
+V primeru, ko na enem sistemu hkrati teče več procesov Make, je težko
+spremljati, koliko poslov se dejansko izvaja v vseh procesih
+skupaj. Pri GNU Make so ta problem rešili s komponento, ki se imenuje
+\textit{jobserver} in temelji na medprocesni komunikaciji (IPC)
+\cite{jobserver-impl}.
+
+Implementacija jobserverja se razlikuje glede na operacijski
+sistem. Na sistemih, ki ustrezajo standardu POSIX, je jobserver
+implementiran z uporabo poimenovane cevi (ang. \textit{named pipe}, v
+unixaški terminologiji tudi \textit{FIFO}). Na sistemih POSIX, ki ne
+podpirajo poimenovanih cevi, mora starš podati otroškim procesom opisnik
+datoteke. Deluje pa na preprostem principu:
+
+\begin{enumerate}
+\item V primeru, ko imamo $N$ poslovnih rež, bo korenska instanca Make
+  (tista, ki ni klicana rekurzivno), v cev zapisala $N - 1$
+  žetonov. Žeton je predstavljen z enim bajtom. Nima vnaprej določene
+  vrednosti, vsi žetoni so lahko popolnoma enaki.
+
+  \begin{figure}[H]
+    \begin{center}
+      \begin{tabular}{ cc|c|c|cc }
+        \cline{2-5}
+        $\rightarrow$ & $3$ & $7$ & $2$ & $6$ & $\rightarrow$ \\
+        \cline{2-5}
+      \end{tabular}
+      \end{center}
+    \caption{Začetno stanje cevi}
+  \end{figure}
+\item Ko želimo zagnati novi proces, moramo ``zasesti režo'' oziroma
+  prebrati en žeton iz cevi. Načeloma želimo, da bo to branje
+  blokirajoče, kar pomeni da se iz sistemskega klica \verb|read| ne
+  bomo vrnili, dokler ne bo žeton na voljo. Implementirano v funkciji
+  \verb|jobserver_acquire| v izvorni datoteki \verb|src/posixos.c|.
+  
+  \begin{figure}[H]
+    \begin{center}
+      \begin{tabular}{ cc|c|cc }
+        \cline{2-4}
+        $\rightarrow$ & $3$ & $7$ & $2$ & $\rightarrow$ \\
+        \cline{2-4}
+      \end{tabular}
+      \end{center}
+    \caption{Stanje cevi po prebranem žetonu}
+  \end{figure}
+
+\item Ko smo posel končali, moramo pa ``spustiti režo'' oziroma
+  zapisati žeton nazaj v cev. Pri tem pa mora vrednost zapisanega žetona biti
+  enaka tisti, ki smo jo prebrali, ko smo posel ustvarili. Implementirano v funkciji
+  \verb|jobserver_release| v izvorni datoteki \verb|src/posixos.c|.
+
+    \begin{figure}[H]
+    \begin{center}
+      \begin{tabular}{ cc|c|c|cc }
+        \cline{2-5}
+        $\rightarrow$ & $6$ & $3$ & $7$ & $2$ & $\rightarrow$ \\
+        \cline{2-5}
+      \end{tabular}
+      \end{center}
+    \caption{Stanje cevi po zapisanem žetonu}
+  \end{figure}
+  
+\end{enumerate}
+
+Vendar, pri takšni implementaciji obstaja ena pomanjkljivost. Če smo v
+situaciji, kjer želimo zagnati novi posel, lahko čakamo, da se bo
+sprostila reža pri jobserverju. Med tem čakanjem se lahko zgodi, da se
+konča nek posel, katerega je ustvaril trenutni proces Makea. Če je
+čakanje na režo v sistemskem klicu \verb|read| blokirajoče, potem se
+proces ne more ustrezno odzvati na signal \verb|SIGCHLD|, ki sporoči,
+da se je otroški proces posla končal. \footnote{Na to omejitev sicer
+  ne bi naleteli, če bi imeli proces z več nitmi, ampak je GNU Make
+  zaradi prenosljivosti popolnoma eno-niten program.}
+
+Pri starejših sistemih POSIX, je Make to težavo respil tako, da,
+preden začne čakati na žeton, poleg že obstoječega opisnika bralnega
+konca cevi, ustvari eno kopijo opisnika, na katero čaka, ko želi
+zasesti režo. Ko otrok umre, bo rokovalnik signala \verb|SIGCHLD|
+zaprl kopijo, in s tem bo se bo vrnil iz sistemskega klica.
+
+\begin{pygmented}[lang=c]
+/* Used to signal read() that a SIGCHLD happened.  Always CLOEXEC.
+   If we use pselect() this will never be created and always -1.
+ */
+static int job_rfd = -1;
+
+static int
+make_job_rfd ()
+{
+  EINTRLOOP (job_rfd, dup (job_fds[0]));
+  // ...
+  return job_rfd;
+}
+
+void
+jobserver_signal ()
+{
+  if (job_rfd >= 0)
+    {
+      close (job_rfd);
+      job_rfd = -1;
+    }
+}
+
+unsigned int
+jobserver_acquire (int timeout)
+{
+  // ...
+  EINTRLOOP (got_token, read (job_rfd, &intake, 1));
+  // ...
+}
+\end{pygmented}
+
+Novejše različice Mac OS-a in Linuxa pa ponujajo sistemski klic, ki se
+imenuje \verb|pselect|. \verb|pselect| ponuja možnost čakanja na enega
+ali več datotečnih opisnikov in je lahko prekinjen s strani
+signala. Novejše različice GNU Make uporabljajo ta sistemski klic.
+
+Na operacijskih sistemih Windows je pa jobserver implementiran
+popolnoma drugače. Od Windowsa XP naprej, Windows ponuja poimenovane
+semaforje (ang. \textit{named semaphore}), ki predstavljajo atomski
+števec, do katerega lahko dostopajo vsi procesi na
+sistemu. Poimenovani semafor ustvarimo s funkcijo
+\verb|CreateSemaphore|, pri čemer moramo podati ime, pod katerim bo
+semafor na voljo ostalim procesom \cite{ms-semaphore}.
+
+\begin{pygmented}[lang=c]
+unsigned int
+jobserver_setup (int slots, const char *style)
+{
+  // ...
+  sprintf (jobserver_semaphore_name, "gmake_semaphore_%d",
+           _getpid ());
+
+  jobserver_semaphore = CreateSemaphore (
+      NULL,          /* Use default security descriptor */
+      slots,                          /* Initial count */
+      slots,                          /* Maximum count */
+      jobserver_semaphore_name);      /* Semaphore name */
+      
+   // ...
+
+   return 1;   
+}      
+\end{pygmented}
+
+Windows ponuja sistemsko funkcijo \verb|WaitForMultipleObjects| iz
+knjižnice \verb|Kernel32.dll|, podobno unixaški funkciji
+\verb|select|, ki omogoča čakanje na več datotečnih opisnikov. Vendar,
+za razliko od \verb|select|, ki podpira samo datotečne opisnike,
+\verb|WaitForMultipleObjects| omogoča čakanje tudi na druge vire
+operacijskega sistema, vključno s procesi. Zaradi tega nimamo težav s
+hkratnim čakanjem na proces in semafor. \footnote{Starejše različice
+  Windowsa sploh ne ponujajo mehanizma, ki bi bil enakovreden
+  unixaškemu signalu \verb|SIGCHLD|, kjer bi OS proces obvestil o
+  koncu otroškega procesa.}
 
 \bibliography{seminar}
 
@@ -49,4 +384,5 @@ Originalno različico programa Make je ustvaril Stuart Feldman
 %%% Local Variables:
 %%% mode: LaTeX
 %%% TeX-master: t
+%%% TeX-command-extra-options: "-shell-escape"
 %%% End:
