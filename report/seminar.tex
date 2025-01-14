@@ -9,8 +9,6 @@
 \usepackage{forest}
 \usepackage{float}
 \usepackage{listings}
-\usepackage{pygmentex}
-\usepackage{ditaa}
 
 \bibliographystyle{acm}
 
@@ -19,6 +17,13 @@
   \large Poročilo seminarske naloge
 }
 \author{Nikola Brković}
+
+
+\lstset{language=C,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{green},
+  stringstyle=\ttfamily\color{red!50!brown},
+  showstringspaces=false}
 
 \begin{document}
 \maketitle
@@ -83,8 +88,9 @@ ciljev) izgleda tako:
 \end{verbatim}
 
 V večini primerov predstavlja ime cilja relativno pot (od Makefilea)
-do datoteke. Ciljem, ki ne predstavljajo datoteke, pa pravimo umetni
-cilji (ang. \textit{phony targets}).
+do datoteke (ali mape). Takim ciljem pravimo tudi ciljne datoteke
+(ang. \textit{target file}). Ciljem, ki ne predstavljajo datoteke (ali
+mape), pa pravimo umetni cilji (ang. \textit{phony targets}).
 
 Predpogoji (oziroma odvisnosti) so drugi cilji, od katerih je
 definirani cilj odvisen, kar pomeni, da se morajo uspešno izvesti,
@@ -104,8 +110,29 @@ V osnovi predstavlja Makefile tekstovno reprezentacijo acikličnega
 usmerjenega grafa odvisnosti. Vsak cilj predstavlja eno vozlišče v
 grafu, odvisnosti so pa usmerjene povezave.
 
+Ko Make zaženemo, lahko podamo cilj, ki naj bi se izvedel, ali pa
+lahko nastavimo privzeti cilj v Makefileu. V nadaljevanju bomo temu
+cilju pravili začetni cilj. Ob vsakem zagonu, Make bo izvedel samo
+tiste cilje v grafu odvisnosti, ki jih je potrebno izvesti.
+
+Da Make ugotovi, ali je nek cilj potrebno ponovno izvesti, se zanaša
+na čas spremembe datoteke (\textit{mtime}). V GNU Make je razreševanje
+odvisnosti (\textit{dependency engine}) implementirano v datoteki
+\textit{src/remake.c}. Za enostavne Makefile deluje algoritem tako:
+
+\begin{enumerate}
+\item Če je cilj umeten, in nima nobenih predpogojev, se bo ta cilj
+  izvedel, in se postopek konča.
+\item Spustimo se po grafu odvisnosti, od vključno začetnega cilja, v
+  nasprotni smeri povezav, dokler ne naletimo na cilj, katerega čas
+  zadnje spremembe je starejši kot čas zadnje spremembe enega od
+  njegovih predpogojev.
+\item Če takšnega cilja ni, potem ne izvedemo
+  ničesar, in se postopek konča.
+\end{enumerate}
+
 \begin{figure}[H]
-  \center{
+  \begin{center}
     \digraph{basicdependency}{
       rankdir=TB;
       size=2;
@@ -121,18 +148,13 @@ grafu, odvisnosti so pa usmerjene povezave.
 
       clean;
     }    
-  }
   \caption{Primer grafa odvistnosti za preprosti Makefile. ``all'' pa
     ``clean'' sta umetna cilja, ostali so datoteke.}
-
+\end{center}
 \end{figure}
 
-Cilj, ki predstavlja datoteko, velja za zastarelega, če je čas zadnje
-spremembe datoteke kasnejši kot zadnji čas spremembe njegovih
-naslednikov. 
-
 \begin{figure}[H]
-  \center{
+  \begin{center}
     \digraph{dependencyupdate}{
       rankdir=TB;
       size=2;
@@ -151,21 +173,18 @@ naslednikov.
       mainc -> maino -> all;
 
       clean;
-    }    
   }
-  \caption{Primer, v katerem je datoteka main.c bila posodobljena. Če
-    Make zaženemo s ciljem ``all'', bodo izvedeni cilji, označeni s
+  \caption{Če posodobimo datoteko main.c, bodo izvedeni cilji, označeni s
     sivo barvo.}
+  \end{center}
 \end{figure}
-
-\section*{Posli}
 
 \section*{Vzporedno izvajanje poslov}
 
 Pri izvajanju programa Make, mu lahko podamo dodatno zastavico
 \verb|-j| (npr. \verb|make -j 32|), ki nastavi največje število
-poslov, ki jih Make lahko izvaja. Temu število pravimo tudi število
-poslovnih rež (ang. \textit{job slots}).
+poslov, ki jih Make lahko izvaja hkrati. Temu število pravimo tudi
+število poslovnih rež (ang. \textit{job slots}).
 
 \begin{figure}[H]
   \begin{center}
@@ -185,13 +204,12 @@ poslovnih rež (ang. \textit{job slots}).
   \end{center}
 \end{figure}
 
-Posebne težave pri vzporednem izvajanju poslov predstavlja rekurzivna
-uporaba Make (ang. \textit{recursive make}). Rekurzivna uporaba
-pomeni, da se znotraj nekega pravila v Makefilu ponovno kliče
-Make. Čeprav je takšna uporaba odsvetovana (``Recursive Make
-Considered Harmful'') \cite{Miller2008RecursiveMC}, se še vedno
-uporablja pri večjih projektih, ki so sestavljeni iz več datotek z
-izvorno kodo.
+Težave pri vzporednem izvajanju poslov povzroča rekurzivna uporaba
+Make (ang. \textit{recursive make}). Rekurzivna uporaba pomeni, da se
+znotraj nekega pravila v Makefilu ponovno kliče Make. Čeprav je takšna
+uporaba odsvetovana (``Recursive Make Considered Harmful'')
+\cite{Miller2008RecursiveMC}, se še vedno uporablja pri večjih
+projektih, ki so sestavljeni iz več datotek z izvorno kodo.
 
 \begin{figure}[H]
   \begin{center}
@@ -211,10 +229,10 @@ izvorno kodo.
 \end{figure}
 
 \begin{figure}[H]
-  \begin{pygmented}[lang=c]
+  \begin{lstlisting}[language=make, basicstyle=\sffamily]
     subsystem:
-        cd subdir && \$(MAKE)
-  \end{pygmented}
+        cd subdir && $(MAKE)
+  \end{lstlisting}
   \caption{Primer rekurzivnega izvajanja Make}
 \end{figure}
 
@@ -298,10 +316,7 @@ konca cevi, ustvari eno kopijo opisnika, na katero čaka, ko želi
 zasesti režo. Ko otrok umre, bo rokovalnik signala \verb|SIGCHLD|
 zaprl kopijo, in s tem bo se bo vrnil iz sistemskega klica.
 
-\begin{pygmented}[lang=c]
-/* Used to signal read() that a SIGCHLD happened.  Always CLOEXEC.
-   If we use pselect() this will never be created and always -1.
- */
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
 static int job_rfd = -1;
 
 static int
@@ -329,7 +344,7 @@ jobserver_acquire (int timeout)
   EINTRLOOP (got_token, read (job_rfd, &intake, 1));
   // ...
 }
-\end{pygmented}
+\end{lstlisting}
 
 Novejše različice Mac OS-a in Linuxa pa ponujajo sistemski klic, ki se
 imenuje \verb|pselect|. \verb|pselect| ponuja možnost čakanja na enega
@@ -344,7 +359,7 @@ sistemu. Poimenovani semafor ustvarimo s funkcijo
 \verb|CreateSemaphore|, pri čemer moramo podati ime, pod katerim bo
 semafor na voljo ostalim procesom \cite{ms-semaphore}.
 
-\begin{pygmented}[lang=c]
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
 unsigned int
 jobserver_setup (int slots, const char *style)
 {
@@ -362,7 +377,7 @@ jobserver_setup (int slots, const char *style)
 
    return 1;   
 }      
-\end{pygmented}
+\end{lstlisting}
 
 Windows ponuja sistemsko funkcijo \verb|WaitForMultipleObjects| iz
 knjižnice \verb|Kernel32.dll|, podobno unixaški funkciji
