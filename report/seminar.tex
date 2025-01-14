@@ -10,7 +10,7 @@
 \usepackage{float}
 \usepackage{listings}
 
-\bibliographystyle{acm}
+\bibliographystyle{ieeetr}
 
 \title{%
   Make \\
@@ -87,7 +87,7 @@ ciljev) izgleda tako:
    [zadnje pravilo]
 \end{verbatim}
 
-V večini primerov predstavlja ime cilja relativno pot (od Makefilea)
+V večini primerov predstavlja ime cilja relativno pot (od Makefila)
 do datoteke (ali mape). Takim ciljem pravimo tudi ciljne datoteke
 (ang. \textit{target file}). Ciljem, ki ne predstavljajo datoteke (ali
 mape), pa pravimo umetni cilji (ang. \textit{phony targets}).
@@ -111,24 +111,30 @@ usmerjenega grafa odvisnosti. Vsak cilj predstavlja eno vozlišče v
 grafu, odvisnosti so pa usmerjene povezave.
 
 Ko Make zaženemo, lahko podamo cilj, ki naj bi se izvedel, ali pa
-lahko nastavimo privzeti cilj v Makefileu. V nadaljevanju bomo temu
+lahko nastavimo privzeti cilj v Makefilu. V nadaljevanju bomo temu
 cilju pravili začetni cilj. Ob vsakem zagonu, Make bo izvedel samo
 tiste cilje v grafu odvisnosti, ki jih je potrebno izvesti.
 
 Da Make ugotovi, ali je nek cilj potrebno ponovno izvesti, se zanaša
 na čas spremembe datoteke (\textit{mtime}). V GNU Make je razreševanje
 odvisnosti (\textit{dependency engine}) implementirano v datoteki
-\textit{src/remake.c}. Za enostavne Makefile deluje algoritem tako:
+\textit{src/remake.c}. Za enostavne Makefile deluje algoritem
+približno tako:
 
 \begin{enumerate}
-\item Če je cilj umeten, in nima nobenih predpogojev, se bo ta cilj
-  izvedel, in se postopek konča.
-\item Spustimo se po grafu odvisnosti, od vključno začetnega cilja, v
+\item Če je začetni cilj umeten, in nima nobenih predpogojev, se bo
+  izvedel in se postopek konča.
+\item Spustimo se po grafu odvisnosti, od vključno trenutnega cilja, v
   nasprotni smeri povezav, dokler ne naletimo na cilj, katerega čas
   zadnje spremembe je starejši kot čas zadnje spremembe enega od
   njegovih predpogojev.
-\item Če takšnega cilja ni, potem ne izvedemo
-  ničesar, in se postopek konča.
+\item Če ni nobenega zastarelega cilja v celotnem grafu, se postopek
+  konča, sicer pa najdeni cilj izvedemo.
+\item Vrnemo se v prejšnji cilj, poskušamo ponoviti korak 2 čim
+  večkrat. Preskočimo cilje, ki smo jih morebiti že izvedli. Če
+  zastarelih ciljev ne najdemo več, izvedemo trenutni cilj in ponovimo
+  ta korak.
+\item Končamo, ko smo prišli nazaj v začetni cilj.
 \end{enumerate}
 
 \begin{figure}[H]
@@ -136,14 +142,21 @@ odvisnosti (\textit{dependency engine}) implementirano v datoteki
     \digraph{basicdependency}{
       rankdir=TB;
       size=2;
+
+      dirc [label = "dir.c"]
+      diro [label = "dir.o"]
+      libfile [label = "libfile.a"]
+      dirc -> diro -> libfile
       
       filec [label = "file.c"]
       fileo [label = "file.o"]
-      
+            
       mainc [label = "main.c"]
       maino [label = "main.o"]
       
-      filec -> fileo -> all;
+      filec -> fileo -> libfile;
+      libfile -> all;
+      
       mainc -> maino -> all;
 
       clean;
@@ -159,23 +172,30 @@ odvisnosti (\textit{dependency engine}) implementirano v datoteki
       rankdir=TB;
       size=2;
       node[style=filled]
+
+      dirc [label="dir.c", fillcolor=white]
+      diro [label="dir.o", fillcolor=white]
+      dirc -> diro -> libfile
       
       filec [label="file.c", fillcolor=white]
-      fileo [label="file.o", fillcolor=white]
+      fileo [label="file.o", fillcolor=lightgrey]
       
-      mainc [label="main.c", fillcolor=lightgrey]
-      maino [label="main.o", fillcolor=lightgrey]
+      libfile [label="libfile.a", fillcolor=lightgrey]
+      filec -> fileo -> libfile
+      
+      mainc [label="main.c", fillcolor=white]
+      maino [label="main.o", fillcolor=white]
 
       all [fillcolor=lightgrey]
       clean [fillcolor=white]
       
-      filec -> fileo -> all;
+      libfile -> all
       mainc -> maino -> all;
 
       clean;
   }
-  \caption{Če posodobimo datoteko main.c, bodo izvedeni cilji, označeni s
-    sivo barvo.}
+  \caption{Če posodobimo datoteko file.c, in zaženemo ``make all'',
+    bodo izvedeni cilji, označeni s sivo barvo.}
   \end{center}
 \end{figure}
 
@@ -229,10 +249,10 @@ projektih, ki so sestavljeni iz več datotek z izvorno kodo.
 \end{figure}
 
 \begin{figure}[H]
-  \begin{lstlisting}[language=make, basicstyle=\sffamily]
+  \begin{verbatim}
     subsystem:
         cd subdir && $(MAKE)
-  \end{lstlisting}
+  \end{verbatim}
   \caption{Primer rekurzivnega izvajanja Make}
 \end{figure}
 
@@ -389,6 +409,37 @@ hkratnim čakanjem na proces in semafor. \footnote{Starejše različice
   Windowsa sploh ne ponujajo mehanizma, ki bi bil enakovreden
   unixaškemu signalu \verb|SIGCHLD|, kjer bi OS proces obvestil o
   koncu otroškega procesa.}
+
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
+unsigned int
+jobserver_acquire (int timeout UNUSED)
+{
+    HANDLE *handles;
+    DWORD dwHandleCount;
+    DWORD dwEvent;
+
+    handles = xmalloc(process_table_actual_size() * sizeof(HANDLE));
+
+    /* Add jobserver semaphore to first slot. */
+    handles[0] = jobserver_semaphore;
+
+    /* Build array of handles to wait for.  */
+    dwHandleCount = 1 + process_set_handles (&handles[1]);
+
+    dwEvent = process_wait_for_multiple_objects (
+        dwHandleCount,  /* number of objects in array */
+        handles,        /* array of objects */
+        FALSE,          /* wait for any object */
+        INFINITE);      /* wait until object is signalled */
+
+    free(handles);
+
+    // ...
+
+    /* WAIT_OBJECT_0 indicates that the semaphore was signalled.  */
+    return dwEvent == WAIT_OBJECT_0;
+}
+\end{lstlisting}
 
 \bibliography{seminar}
 

@@ -1,0 +1,183 @@
+\documentclass{beamer}
+
+\usepackage[]{graphicx}
+
+\mode<presentation>
+{
+  \usetheme{Warsaw}      % or try Darmstadt, Madrid, Warsaw, ...
+  \usecolortheme{default} % or try albatross, beaver, crane, ...
+  \usefonttheme{default}  % or try serif, structurebold, ...
+  \setbeamertemplate{navigation symbols}{}
+  \setbeamertemplate{caption}[numbered]
+}
+
+\usepackage[slovene]{babel}
+\usepackage{bigfoot}
+\usepackage{hyperref}
+\usepackage[pdf]{graphviz}
+\usepackage{forest}
+\usepackage{float}
+\usepackage{listings}
+
+\title{Make}
+\author{Nikola Brković}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+  \frametitle{Kaj je Make?}
+
+  \begin{itemize}
+  \item Orodje, ki avtomatizira proces izgradnje programske opreme
+  \item Omogoča opis odvisnosti med izvornimi datotekami v
+    konfiguracijski datoteki - Makefilu
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Različice}
+  
+  \begin{itemize}
+  \item GNU, BSD, NMAKE, dmake
+  \item Danes se bomo osredotočili na GNU Make
+  \item Podpira Linux, Mac OS, Windows, OS/2, DOS..
+  \end{itemize}
+\end{frame}  
+
+\begin{frame}
+  \frametitle{Makefile}
+
+  \begin{itemize}
+  \item Vsebuje seznam ciljev
+  \item Cilj je odvisen od predpogojev in lahko vsebuje pravila 
+  \item Podpira tudi spremenljivke, pogojno izvajanje, itd.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Osnovna sintaksa Makefila}
+  
+\begin{verbatim}
+  cilj [cilj ...]: [predpogoj ...]
+   [prvo pravilo]
+   ...
+   [zadnje pravilo]
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[t, fragile]
+  \frametitle{Primer preprostega Makefila}
+
+\begin{lstlisting}[language=make, frame=single]
+all: libfile.a main.o
+	ld libfile.a main.o
+
+main.o: main.c
+	gcc -c main.c -o main.o
+
+dir.o: dir.c
+	gcc -c dir.c -o dir.o
+
+file.o: file.c
+	gcc -c file.c -o file.o
+
+libfile.a: dir.o file.o
+	ar rcs libfile.a dir.o file.o
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Graf odvisnosti}
+  \center{
+  \digraph{basicdependency}{
+      rankdir=TB;
+      size=2;
+
+      dirc [label = "dir.c"]
+      diro [label = "dir.o"]
+      libfile [label = "libfile.a"]
+      dirc -> diro -> libfile
+      
+      filec [label = "file.c"]
+      fileo [label = "file.o"]
+            
+      mainc [label = "main.c"]
+      maino [label = "main.o"]
+      
+      filec -> fileo -> libfile;
+      libfile -> all;
+      
+      mainc -> maino -> all;
+      
+      clean;
+    }       
+  }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Izvajanje ciljev}
+  
+  \begin{enumerate}
+  \item Če je začetni cilj umeten, in nima nobenih predpogojev, se bo
+    izvedel in se postopek konča. (\textit{clean})
+  \item Spustimo se po grafu odvisnosti, od vključno trenutnega cilja, v
+    nasprotni smeri povezav, dokler ne naletimo na cilj, katerega čas
+    zadnje spremembe je starejši kot čas zadnje spremembe enega od
+    njegovih predpogojev.
+  \item Če ni nobenega zastarelega cilja v celotnem grafu, se postopek
+    konča, sicer pa najdeni cilj izvedemo.
+  \item Vrnemo se v prejšnji cilj, poskušamo ponoviti korak 2 čim
+    večkrat. Preskočimo cilje, ki smo jih morebiti že izvedli. Če
+    zastarelih ciljev ne najdemo več, izvedemo trenutni cilj in ponovimo
+    ta korak.
+  \item Končamo, ko smo prišli nazaj v začetni cilj.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Izvajanje ciljev}
+  
+  Spremenili smo datoteko file.c:
+  \center{
+    \digraph{dependencyupdate}{
+      rankdir=TB;
+      size=2;
+      node[style=filled]
+
+      dirc [label="dir.c", fillcolor=white]
+      diro [label="dir.o", fillcolor=white]
+      dirc -> diro -> libfile
+      
+      filec [label="file.c", fillcolor=white]
+      fileo [label="file.o", fillcolor=lightgrey]
+      
+      libfile [label="libfile.a", fillcolor=lightgrey]
+      filec -> fileo -> libfile
+      
+      mainc [label="main.c", fillcolor=white]
+      maino [label="main.o", fillcolor=white]
+
+      all [fillcolor=lightgrey]
+      clean [fillcolor=white]
+      
+      libfile -> all
+      mainc -> maino -> all;
+
+      clean;
+    }
+  }
+\end{frame}
+
+\begin{frame}
+
+\end{frame}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% TeX-command-extra-options: "-shell-escape"
+%%% End:
