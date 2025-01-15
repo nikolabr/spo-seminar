@@ -130,8 +130,8 @@ libfile.a: dir.o file.o
     konča, sicer pa najdeni cilj izvedemo.
   \item Vrnemo se v prejšnji cilj, poskušamo ponoviti korak 2 čim
     večkrat. Preskočimo cilje, ki smo jih morebiti že izvedli. Če
-    zastarelih ciljev ne najdemo več, izvedemo trenutni cilj in ponovimo
-    ta korak.
+    zastarelih ciljev ne najdemo več, izvedemo trenutni cilj in
+    ponovimo ta korak.
   \item Končamo, ko smo prišli nazaj v začetni cilj.
 \end{enumerate}
 \end{frame}
@@ -170,8 +170,184 @@ libfile.a: dir.o file.o
   }
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]
+  \frametitle{Zaporedno izvajanje}
 
+  \begin{itemize}
+  \item Izvajanje več poslov hkrati
+  \item Poslovne reže (ang. \textit{job slots})
+\begin{lstlisting}[frame=single, basicstyle=\sffamily]
+make -j 4
+\end{lstlisting}
+  \item Ključno pri velikih projektih
+  \item Primer: Linux (linux-6.13-rc7)
+\begin{lstlisting}[frame=single, basicstyle=\sffamily]
+$ find . -name '*.c' | wc -l
+34788
+\end{lstlisting}
+
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Zaporedno izvajanje}
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
+      Pri enem procesu je preprosto, ampak na težave naletimo pri
+      rekurzivnih Makih, kjer je potrebna medprocesna
+      komunikacija. Rešeno z jobserverjem.
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{forest}
+        for tree={
+          draw,
+          anchor=north,
+          align=center,
+        },
+        [{make}, align=center,
+        [{ld}],
+        [{gcc}],
+        [{gcc}],
+        [{gcc}]]
+      \end{forest}
+      
+      \bigskip
+      \bigskip
+      
+      \begin{forest}
+        for tree={
+          draw,
+          anchor=north,
+          align=center,
+        },
+        [{make}, align=center,
+        [{ld}],
+        [{gcc}],
+        [{make}, [{gcc}], [{gcc}]]]
+      \end{forest}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Jobserver na sistemih POSIX}
+
+  Implementiran z uporabo poimenovane cevi (FIFO), imamo $N$ poslovnih rež.
+
+  Ko želi zagnati posel, mora zasesti režo. Ko se posel konča, pa
+  sprosti režo.
+  
+  \begin{enumerate}
+  \item Začetno stanje
+    
+    \begin{tabular}{ cc|c|cc }
+      \cline{2-4}
+      $\rightarrow$ & $3$ & $7$ & $2$ & $\rightarrow$ \\
+      \cline{2-4}
+    \end{tabular}
+    
+  \item Reža zasedena, prebran žeton
+    
+    \begin{tabular}{ cc|cc }
+      \cline{2-3}
+      $\rightarrow$ & $3$ & $7$ & $\rightarrow$ \\
+      \cline{2-3}
+    \end{tabular}
+
+  \item Zapisan žeton
+
+    \begin{tabular}{ cc|c|cc }
+      \cline{2-4}
+      $\rightarrow$ & $2$ & $3$ & $7$ & $\rightarrow$ \\
+      \cline{2-4}
+    \end{tabular}
+    
+  \end{enumerate}
+
+  Na starejših sistemih na režo čaka z \textit{read}, na novejših pa \textit{pselect}.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Jobserver na sistemih POSIX}
+
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
+static int job_rfd = -1;
+
+static int
+make_job_rfd ()
+{
+  EINTRLOOP (job_rfd, dup (job_fds[0]));
+  // ...
+  return job_rfd;
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Jobserver na sistemih POSIX}
+
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
+void
+jobserver_signal ()
+{
+  if (job_rfd >= 0)
+    {
+      close (job_rfd);
+      job_rfd = -1;
+    }
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Jobserver na sistemih POSIX}
+
+\begin{lstlisting}[language=C, basicstyle=\sffamily]
+unsigned int
+jobserver_acquire (int timeout)
+{
+  // ...
+  EINTRLOOP (got_token, read (job_rfd, &intake, 1));
+  // ...
+}
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Jobserver na Windowsih}
+
+  Implementiran z uporabo poimenovanega semaforja - sistemskega atomskega števca.
+
+  Semafor se ustvari s funkcijo \textit{CreateSemaphore}.
+
+  Lahko čakamo na proces in semafor hkrati z \textit{WaitForMultipleObjects}.
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Jobserver na Windowsih}
+
+\begin{lstlisting}[language=C, basicstyle=\footnotesize]
+    HANDLE *handles;
+    DWORD dwHandleCount;
+    DWORD dwEvent;
+
+    handles = xmalloc(process_table_actual_size()
+                      * sizeof(HANDLE));
+
+    /* Add jobserver semaphore to first slot. */
+    handles[0] = jobserver_semaphore;
+
+    /* Build array of handles to wait for.  */
+    dwHandleCount = 1 + process_set_handles (&handles[1]);
+
+    dwEvent = process_wait_for_multiple_objects (
+        dwHandleCount,  /* number of objects in array */
+        handles,        /* array of objects */
+        FALSE,          /* wait for any object */
+        INFINITE);      /* wait until object is signalled */
+
+\end{lstlisting}
 \end{frame}
 
 \end{document}

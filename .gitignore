@@ -4,6 +4,8 @@ build/
 report/*
 !report/seminar.tex
 !report/seminar.bib
+!report/seminar.pdf
 
 beamer/*
 !beamer/seminar.tex
+!beamer/seminar.pdf
