@@ -332,6 +332,9 @@ jobserver_acquire (int timeout)
 \begin{frame}[fragile]
   \frametitle{Jobserver na Windowsih}
 \begin{lstlisting}[basicstyle=\footnotesize]
+unsigned int
+jobserver_setup (int slots, const char *style)
+{
   sprintf (jobserver_semaphore_name,
     "gmake_semaphore_%d", _getpid ());
 
