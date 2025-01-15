@@ -72,7 +72,7 @@ Make:
 Ker je to najbolj priljubljena različica, se bom v tem poročilu
 osredotočil na GNUjevsko različico, natančneje na izdajo 4.4.1. Kosi
 izvorne kode in podrobnosti implentacije bodo izvirali iz te
-različice, vendar splošni koncepti velja tudi za druge različice.
+različice, vendar splošni koncepti veljajo tudi za druge različice.
 
 \section*{Osnovna sintaksa}
 
@@ -302,7 +302,7 @@ datoteke. Deluje pa na preprostem principu:
     \caption{Stanje cevi po prebranem žetonu}
   \end{figure}
 
-\item Ko smo posel končali, moramo pa ``spustiti režo'' oziroma
+\item Ko smo posel končali, moramo pa ``sprostiti režo'' oziroma
   zapisati žeton nazaj v cev. Pri tem pa mora vrednost zapisanega žetona biti
   enaka tisti, ki smo jo prebrali, ko smo posel ustvarili. Implementirano v funkciji
   \verb|jobserver_release| v izvorni datoteki \verb|src/posixos.c|.
@@ -411,6 +411,22 @@ hkratnim čakanjem na proces in semafor. \footnote{Starejše različice
   koncu otroškega procesa.}
 
 \begin{lstlisting}[language=C, basicstyle=\sffamily]
+static HANDLE jobserver_semaphore = NULL;
+
+unsigned int
+jobserver_setup (int slots, const char *style)
+{
+  sprintf (jobserver_semaphore_name, "gmake_semaphore_%d", _getpid ());
+
+  jobserver_semaphore = CreateSemaphore (
+      NULL,                           /* Use default security descriptor */
+      slots,                          /* Initial count */
+      slots,                          /* Maximum count */
+      jobserver_semaphore_name);      /* Semaphore name */
+
+  // ...
+}
+
 unsigned int
 jobserver_acquire (int timeout UNUSED)
 {
