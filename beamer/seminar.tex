@@ -50,8 +50,8 @@
   \frametitle{Makefile}
 
   \begin{itemize}
-  \item Vsebuje seznam ciljev
-  \item Cilj je odvisen od predpogojev in lahko vsebuje pravila
+  \item Vsebuje seznam definicij ciljev - pravil
+  \item Cilj je odvisen od predpogojev in lahko vsebuje ukaze
   \item Cilji so lahko umetni
   \item Podpira tudi spremenljivke, pogojno izvajanje, itd.
   \end{itemize}
@@ -62,9 +62,9 @@
   
 \begin{verbatim}
   cilj [cilj ...]: [predpogoj ...]
-   [prvo pravilo]
+   [prvi ukaz]
    ...
-   [zadnje pravilo]
+   [zadnji ukaz]
 \end{verbatim}
 \end{frame}
 

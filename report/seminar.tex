@@ -77,14 +77,14 @@ različice, vendar splošni koncepti veljajo tudi za druge različice.
 \section*{Osnovna sintaksa}
 
 Makefile (poleg drugih zadev, kot so definicije spremenljivk) v osnovi
-sestavljajo definicije ciljev. Definicija enega (ali več enakih
-ciljev) izgleda tako:
+sestavljajo definicije ciljev - pravila. Definicija enega pravila
+izgleda tako:
 
 \begin{verbatim}
   cilj [cilj ...]: [predpogoj ...]
-   [prvo pravilo]
+   [prvi ukaz]
    ...
-   [zadnje pravilo]
+   [zadnji ukaz]
 \end{verbatim}
 
 V večini primerov predstavlja ime cilja relativno pot (od Makefila)
@@ -96,13 +96,13 @@ Predpogoji (oziroma odvisnosti) so drugi cilji, od katerih je
 definirani cilj odvisen, kar pomeni, da se morajo uspešno izvesti,
 preden se definirani cilj izvede.
 
-Vsako pravilo predstavlja stavek, ki se lahko izvede v sistemski
-lupini. Ker GNU Make izvira iz unixaškega sveta, je razvit z
-unixaškimi lupini v mislih, ampak podpira tudi neunixaške lupine, kot
-so \verb|cmd.exe| (Windows NT), \verb|command.com| (DOS, Windows 95 in
-98), \verb|4OS2| (OS/2). V stavek lahko vključimo določene izraze,
-katere bo Make izračunal ob izvajanju, ampak je sintaksa samih pravil
-precej odvisna od operacijskega sistema in izbrane sistemske lupine.
+Vsako ukaz se izvede se izvede v sistemski lupini ločeno. Ker GNU Make
+izvira iz unixaškega sveta, je razvit z unixaškimi lupini v mislih,
+ampak podpira tudi neunixaške lupine, kot so \verb|cmd.exe| (Windows
+NT), \verb|command.com| (DOS, Windows 95 in 98), \verb|4OS2| (OS/2). V
+stavek lahko vključimo določene izraze, katere bo Make izračunal ob
+izvajanju, ampak je sintaksa samih ukazov precej odvisna od
+operacijskega sistema in izbrane sistemske lupine.
 
 \section*{Odvisnosti}
 
@@ -226,7 +226,7 @@ poslov, ki jih Make lahko izvaja hkrati. Temu število pravimo tudi
 
 Težave pri vzporednem izvajanju poslov povzroča rekurzivna uporaba
 Make (ang. \textit{recursive make}). Rekurzivna uporaba pomeni, da se
-znotraj nekega pravila v Makefilu ponovno kliče Make. Čeprav je takšna
+znotraj nekega ukaza v Makefilu ponovno kliče Make. Čeprav je takšna
 uporaba odsvetovana (``Recursive Make Considered Harmful'')
 \cite{Miller2008RecursiveMC}, se še vedno uporablja pri večjih
 projektih, ki so sestavljeni iz več datotek z izvorno kodo.
